@@ -1,0 +1,4 @@
+/consensus_mechanisms
+/__pycache__
+proof_of_work.py 
+coordinator.py

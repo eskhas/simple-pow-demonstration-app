@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blockchain Explorer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .block { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .miner { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Blockchain Explorer</h1>
+    <h2>Blockchain</h2>
+    <div id="blockchain">
+        {% for block in blockchain %}
+        <div class="block">
+            <p><strong>Index:</strong> {{ block.index }}</p>
+            <p><strong>Transactions:</strong> {{ block.transactions }}</p>
+            <p><strong>Previous Hash:</strong> {{ block.previous_hash }}</p>
+            <p><strong>Hash:</strong> {{ block.hash }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2>Mining Rewards</h2>
+    <div id="miners">
+        {% for miner, reward in rewards.items() %}
+        <div class="miner">
+            <p><strong>Miner:</strong> {{ miner }}</p>
+            <p><strong>Reward:</strong> {{ reward }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2>Actions</h2>
+    <button onclick="startMining()">Start Mining</button>
+
+    <script>
+        function startMining() {
+            fetch('/start', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.block) {
+                        alert('Block created successfully. Start mining!');
+                    } else {
+                        alert(data.error);
+                    }
+                });
+        }
+    </script>
+</body>
+</html>
