@@ -1,3 +1,4 @@
+# miner.py
 import hashlib
 import requests
 import time
@@ -22,36 +23,39 @@ def mine_block(block, difficulty):
         nonce += 1
 
 def miner_thread(server_url, miner_id):
-    while True:
-        try:
-            # Trigger mining manually
-            input(f"[{miner_id}] Press Enter to fetch a block to mine...")
+    try:
+        # Register miner
+        requests.post(f"{server_url}/register_miner", json={"miner_id": miner_id})
+        print(f"[{miner_id}] Registered with server.")
 
-            response = requests.post(f"{server_url}/start")
-            if response.status_code != 200:
-                print(f"[{miner_id}] Failed to fetch block: {response.json().get('error')}")
-                continue
+        while True:
+            response = requests.get(f"{server_url}/blockchain")
+            if response.status_code == 200:
+                blockchain = response.json()
+                if not blockchain or blockchain[-1]["hash"]:
+                    print(f"[{miner_id}] Waiting for a new block...")
+                    time.sleep(5)
+                    continue
 
-            block_data = response.json()
-            block = block_data.get("block")
+                block = blockchain[-1]
+                print(f"[{miner_id}] Mining block {block['index']}...")
+                nonce, hash_value, time_taken = mine_block(block, difficulty=5)
 
-            print(f"[{miner_id}] Mining block {block['index']}...")
-            nonce, hash_value, time_taken = mine_block(block, difficulty=5)
+                submission_response = requests.post(
+                    f"{server_url}/mine", json={"miner_id": miner_id, "nonce": nonce, "time_taken": time_taken}
+                )
+                if submission_response.status_code == 200:
+                    print(f"[{miner_id}] Block mined successfully in {time_taken:.2f}s!")
+                else:
+                    print(f"[{miner_id}] Failed to submit block: {submission_response.json().get('error')}")
 
-            submission_response = requests.post(
-                f"{server_url}/mine", json={"miner_id": miner_id, "nonce": nonce}
-            )
-            if submission_response.status_code == 200:
-                print(f"[{miner_id}] Block mined successfully in {time_taken:.2f}s!")
-            else:
-                print(f"[{miner_id}] Failed to submit block: {submission_response.json().get('error')}")
-
-        except requests.RequestException as e:
-            print(f"[{miner_id}] Error communicating with server: {e}")
+    except requests.RequestException as e:
+        print(f"[{miner_id}] Error communicating with server: {e}")
 
 if __name__ == "__main__":
     server_url = "http://127.0.0.1:5000"
-    miner_id = f"Miner-{random.randint(1, 1000)}"
 
-    thread = threading.Thread(target=miner_thread, args=(server_url, miner_id))
-    thread.start()
+    for i in range(3):  # Start 3 miners
+        miner_id = f"Miner-{random.randint(1, 1000)}"
+        thread = threading.Thread(target=miner_thread, args=(server_url, miner_id))
+        thread.start()

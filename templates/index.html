@@ -10,6 +10,7 @@
 </head>
 <body>
     <h1>Blockchain Explorer</h1>
+
     <h2>Blockchain</h2>
     <div id="blockchain">
         {% for block in blockchain %}
@@ -28,6 +29,8 @@
         <div class="miner">
             <p><strong>Miner:</strong> {{ miner }}</p>
             <p><strong>Reward:</strong> {{ reward }}</p>
+            <p><strong>Status:</strong> {{ status[miner].status }}</p>
+            <p><strong>Last Mining Time:</strong> {{ status[miner].time }} seconds</p>
         </div>
         {% endfor %}
     </div>
@@ -47,6 +50,14 @@
                     }
                 });
         }
+
+        setInterval(() => {
+            fetch('/')
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                });
+        }, 5000); // Refresh every 5 seconds
     </script>
 </body>
 </html>
