@@ -1,4 +1,3 @@
-# miner.py
 import hashlib
 import requests
 import time

@@ -1,4 +1,3 @@
-# server.py
 from flask import Flask, request, jsonify, render_template
 import time
 import hashlib
@@ -44,9 +43,9 @@ def index():
         return render_template(
             'index.html',
             blockchain=blockchain,
-            rewards=mining_rewards,
+            mining_rewards=mining_rewards,
             miners=miners,
-            status=mining_status,
+            mining_status=mining_status,
             difficulty=difficulty,
             leaderboard=leaderboard,
             mining_times=mining_times,
@@ -92,17 +91,30 @@ def mine_block():
             block["nonce"] = nonce
             block["hash"] = hash_value
 
-            # Update rewards and leaderboard
-            mining_rewards[miner_id] = mining_rewards.get(miner_id, 0) + 50
+            # Assign dynamic rewards
+            reward = random.randint(10, 100)  # Reward range from 10 to 100 BTC
+            mining_rewards[miner_id] = mining_rewards.get(miner_id, 0) + reward
             leaderboard[miner_id] = leaderboard.get(miner_id, 0) + 1
-            mining_status[miner_id] = {"status": "Completed", "time": time_taken}
 
-            # Log mining times
-            mining_times[block["index"]] = {
-                miner_id: time_taken
-                for miner_id, status in mining_status.items()
-                if status["status"] == "Mining"
+            # Check if miner already has successful block data; if not, initialize
+            if "last_successful_block" not in mining_status[miner_id]:
+                mining_status[miner_id]["last_successful_block"] = {
+                    "index": "N/A",
+                    "time": "N/A",
+                    "reward": "N/A"
+                }
+
+            # Update mining status with the new successful block details
+            mining_status[miner_id]["status"] = "Completed"
+            mining_status[miner_id]["time"] = time_taken
+            mining_status[miner_id]["last_successful_block"] = {
+                "index": block["index"],
+                "time": time_taken,
+                "reward": reward
             }
+
+            # Log for debugging
+            print(f"[{miner_id}] Mined block {block['index']} in {time_taken:.2f}s, reward {reward} BTC. Total rewards: {mining_rewards[miner_id]} BTC")
 
             return jsonify({"message": "Block mined successfully!", "hash": hash_value}), 200
         else:
@@ -131,7 +143,15 @@ def register_miner():
     with lock:
         if miner_id not in miners:
             miners.append(miner_id)
-            mining_status[miner_id] = {"status": "Idle", "time": None}
+            mining_status[miner_id] = {
+        "status": "Idle",
+        "time": "N/A",
+        "last_successful_block": {
+            "index": "N/A",
+            "time": "N/A",
+            "reward": "N/A"
+        }
+    }
         return jsonify({"message": "Miner registered successfully."}), 200
 
 # Notify miners about a new block
