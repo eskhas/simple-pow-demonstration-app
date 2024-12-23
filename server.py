@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, render_template
 import time
 import hashlib
 import threading
+import random
 
 app = Flask(__name__)
 lock = threading.Lock()
@@ -12,6 +13,7 @@ difficulty = 5
 mining_rewards = {}
 miners = []  # Track active miners
 mining_status = {}  # Track mining progress for miners
+mining_times = {}  # Track mining times for all miners
 
 # Helper function to calculate hash
 def calculate_hash(index, transactions, previous_hash, timestamp, nonce):
@@ -36,7 +38,23 @@ def create_block(transactions):
 @app.route('/')
 def index():
     with lock:
-        return render_template('index.html', blockchain=blockchain, rewards=mining_rewards, miners=miners, status=mining_status, difficulty=difficulty)
+        total_blocks = len(blockchain)
+        total_rewards = sum(mining_rewards.values())
+        avg_mining_time = (
+            sum(time["time"] for time in mining_times.values() if time["time"] is not None) / len(mining_times)
+            if mining_times else 0
+        )
+        return render_template(
+            'index.html',
+            blockchain=blockchain,
+            rewards=mining_rewards,
+            miners=miners,
+            status=mining_status,
+            difficulty=difficulty,
+            total_blocks=total_blocks,
+            total_rewards=total_rewards,
+            avg_mining_time=avg_mining_time
+        )
 
 @app.route('/blockchain', methods=['GET'])
 def get_blockchain():
@@ -78,9 +96,13 @@ def mine_block():
             block["nonce"] = nonce
             block["hash"] = hash_value
 
-            # Update rewards
+            # Update rewards and mining times
             mining_rewards[miner_id] = mining_rewards.get(miner_id, 0) + 50
             mining_status[miner_id] = {"status": "Completed", "time": time_taken}
+
+            for miner in mining_times:
+                if miner != miner_id:
+                    mining_status[miner]["status"] = "Failed"
 
             return jsonify({"message": "Block mined successfully!", "hash": hash_value}), 200
         else:
@@ -99,12 +121,14 @@ def register_miner():
         if miner_id not in miners:
             miners.append(miner_id)
             mining_status[miner_id] = {"status": "Idle", "time": None}
+            mining_times[miner_id] = {"time": None}
         return jsonify({"message": "Miner registered successfully."}), 200
 
 # Notify miners about a new block
 def notify_miners(block):
     for miner_id in miners:
         mining_status[miner_id] = {"status": "Mining", "time": None}
+        mining_times[miner_id]["time"] = None
         print(f"Notifying miner {miner_id} about new block...")
 
 if __name__ == '__main__':

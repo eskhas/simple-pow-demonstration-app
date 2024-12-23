@@ -3,7 +3,9 @@ import hashlib
 import requests
 import time
 import threading
-import random
+
+# Miner names
+miner_names = ["Alice", "Bob", "Charlie"]
 
 def calculate_hash(index, transactions, previous_hash, timestamp, nonce):
     block_string = f"{index}{transactions}{previous_hash}{timestamp}{nonce}"
@@ -55,7 +57,6 @@ def miner_thread(server_url, miner_id):
 if __name__ == "__main__":
     server_url = "http://127.0.0.1:5000"
 
-    for i in range(3):  # Start 3 miners
-        miner_id = f"Miner-{random.randint(1, 1000)}"
-        thread = threading.Thread(target=miner_thread, args=(server_url, miner_id))
+    for name in miner_names:  # Start miners with names
+        thread = threading.Thread(target=miner_thread, args=(server_url, name))
         thread.start()
