@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Blockchain Explorer</title>
+    <title>Proof of Work Blockchain </title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .block { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
@@ -19,7 +19,7 @@
         function adjustDifficulty() {
             const newDifficulty = prompt("Enter new difficulty level:");
             if (newDifficulty) {
-                fetch('/adjust_difficulty', {
+                fetch('/difficulty', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ difficulty: parseInt(newDifficulty) })
@@ -33,14 +33,21 @@
                 });
             }
         }
-
+        setInterval(() => {
+            fetch('/')
+                .then(response => response.text())
+                .then(html => {
+                    document.body.innerHTML = html;
+                });
+        }, 5000); // Refresh every 5 seconds
+        
         function refreshPage() {
             location.reload();
         }
     </script>
 </head>
 <body>
-    <h1>Blockchain Explorer</h1>
+    <h1>Proof of Work Blockchain</h1>
 
     <button onclick="startMining()">Start Mining</button>
     <button onclick="adjustDifficulty()">Adjust Difficulty</button>

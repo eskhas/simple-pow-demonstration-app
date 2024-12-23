@@ -13,7 +13,10 @@ difficulty = 5
 mining_rewards = {}
 miners = []  # Track active miners
 mining_status = {}  # Track mining progress for miners
+leaderboard = {}  # Track number of blocks mined by each miner
 mining_times = {}  # Track mining times for all miners
+
+MINER_NAMES = ["Alice", "Bob", "Charlie", "David", "Eve", "Frank"]
 
 # Helper function to calculate hash
 def calculate_hash(index, transactions, previous_hash, timestamp, nonce):
@@ -38,12 +41,6 @@ def create_block(transactions):
 @app.route('/')
 def index():
     with lock:
-        total_blocks = len(blockchain)
-        total_rewards = sum(mining_rewards.values())
-        avg_mining_time = (
-            sum(time["time"] for time in mining_times.values() if time["time"] is not None) / len(mining_times)
-            if mining_times else 0
-        )
         return render_template(
             'index.html',
             blockchain=blockchain,
@@ -51,9 +48,8 @@ def index():
             miners=miners,
             status=mining_status,
             difficulty=difficulty,
-            total_blocks=total_blocks,
-            total_rewards=total_rewards,
-            avg_mining_time=avg_mining_time
+            leaderboard=leaderboard,
+            mining_times=mining_times,
         )
 
 @app.route('/blockchain', methods=['GET'])
@@ -96,13 +92,17 @@ def mine_block():
             block["nonce"] = nonce
             block["hash"] = hash_value
 
-            # Update rewards and mining times
+            # Update rewards and leaderboard
             mining_rewards[miner_id] = mining_rewards.get(miner_id, 0) + 50
+            leaderboard[miner_id] = leaderboard.get(miner_id, 0) + 1
             mining_status[miner_id] = {"status": "Completed", "time": time_taken}
 
-            for miner in mining_times:
-                if miner != miner_id:
-                    mining_status[miner]["status"] = "Failed"
+            # Log mining times
+            mining_times[block["index"]] = {
+                miner_id: time_taken
+                for miner_id, status in mining_status.items()
+                if status["status"] == "Mining"
+            }
 
             return jsonify({"message": "Block mined successfully!", "hash": hash_value}), 200
         else:
@@ -113,6 +113,17 @@ def get_rewards():
     with lock:
         return jsonify(mining_rewards), 200
 
+@app.route('/difficulty', methods=['POST'])
+def set_difficulty():
+    global difficulty
+    data = request.json
+    new_difficulty = data.get("difficulty")
+    with lock:
+        if isinstance(new_difficulty, int) and new_difficulty > 0:
+            difficulty = new_difficulty
+            return jsonify({"message": "Difficulty updated successfully."}), 200
+        return jsonify({"error": "Invalid difficulty value."}), 400
+
 @app.route('/register_miner', methods=['POST'])
 def register_miner():
     data = request.json
@@ -121,14 +132,12 @@ def register_miner():
         if miner_id not in miners:
             miners.append(miner_id)
             mining_status[miner_id] = {"status": "Idle", "time": None}
-            mining_times[miner_id] = {"time": None}
         return jsonify({"message": "Miner registered successfully."}), 200
 
 # Notify miners about a new block
 def notify_miners(block):
     for miner_id in miners:
         mining_status[miner_id] = {"status": "Mining", "time": None}
-        mining_times[miner_id]["time"] = None
         print(f"Notifying miner {miner_id} about new block...")
 
 if __name__ == '__main__':
