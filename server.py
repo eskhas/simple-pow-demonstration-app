@@ -51,6 +51,11 @@ def index():
             mining_times=mining_times,
         )
 
+@app.route('/difficulty', methods=['GET'])
+def get_difficulty():
+    with lock:
+        return jsonify({"difficulty": difficulty}), 200
+
 @app.route('/blockchain', methods=['GET'])
 def get_blockchain():
     with lock:

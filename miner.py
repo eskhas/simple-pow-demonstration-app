@@ -30,6 +30,16 @@ def miner_thread(server_url, miner_id):
         print(f"[{miner_id}] Registered with server.")
 
         while True:
+            # Fetch the latest difficulty from the server
+            response = requests.get(f"{server_url}/difficulty")
+            if response.status_code == 200:
+                difficulty = response.json().get("difficulty", 5)
+                print(f"[{miner_id}] Current difficulty: {difficulty}")
+            else:
+                print(f"[{miner_id}] Failed to fetch difficulty from server.")
+                time.sleep(5)
+                continue
+
             response = requests.get(f"{server_url}/blockchain")
             if response.status_code == 200:
                 blockchain = response.json()
@@ -40,7 +50,8 @@ def miner_thread(server_url, miner_id):
 
                 block = blockchain[-1]
                 print(f"[{miner_id}] Mining block {block['index']}...")
-                nonce, hash_value, time_taken = mine_block(block, difficulty=5)
+
+                nonce, hash_value, time_taken = mine_block(block, difficulty=difficulty)
 
                 submission_response = requests.post(
                     f"{server_url}/mine", json={"miner_id": miner_id, "nonce": nonce, "time_taken": time_taken}
